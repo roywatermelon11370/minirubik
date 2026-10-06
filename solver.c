@@ -8,7 +8,8 @@ enum {
     PERMUTATIONS = 5040,
     ORIENTATIONS = 729,
     STATES = PERMUTATIONS * ORIENTATIONS,
-    MOVES = 9
+    MOVES = 9,
+    MAX_DEPTH = 11
 };
 
 typedef struct {
@@ -130,7 +131,7 @@ static void unrank_state(uint32_t rank, state_t *state)
         uint8_t q = (uint8_t) (p / f);
         p %= f;
         state->p[i] = available[q];
-        for (uint8_t j = q; j + 1U < CUBIES - i; ++j)
+        for (uint8_t j = q; j + 1 < CUBIES - i; ++j)
             available[j] = available[j + 1U];
         if (i < 5)
             f /= 6U - i;
@@ -188,18 +189,48 @@ static int valid(const state_t *state)
     return sum % 3U == 0;
 }
 
-static uint8_t *build_table(uint8_t *diameter)
+/* The quarter-turn tables and two small pattern databases use 40,383 bytes.
+ * Distances are measured to the requested state, so searching from solved in
+ * move order reproduces the old BFS tie-breaking among shortest paths. */
+static uint16_t permutation[3][PERMUTATIONS];
+static uint16_t orientation[3][ORIENTATIONS];
+static uint8_t permutation_distance[PERMUTATIONS];
+static uint8_t orientation_distance[ORIENTATIONS];
+
+static int build_distances(uint16_t count, const uint16_t *turns,
+                           uint8_t *distance, uint16_t goal)
 {
-    uint8_t *toward_solved = malloc(STATES);
-    uint32_t *queue = malloc((size_t) STATES * sizeof *queue);
-    uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
-    uint32_t head = 0, tail = 1, level_end = 1;
-    state_t state;
-    if (!toward_solved || !queue) {
-        free(toward_solved);
-        free(queue);
-        return NULL;
+    uint16_t visited = 1;
+    uint8_t depth = 0;
+    memset(distance, UINT8_MAX, count);
+    distance[goal] = 0;
+    while (visited < count) {
+        uint16_t added = 0;
+        for (uint16_t here = 0; here < count; ++here) {
+            if (distance[here] != depth)
+                continue;
+            for (uint8_t face = 0; face < 3; ++face) {
+                uint16_t there = here;
+                for (uint8_t turn = 0; turn < 3; ++turn) {
+                    there = turns[(size_t) face * count + there];
+                    if (distance[there] == UINT8_MAX) {
+                        distance[there] = (uint8_t) (depth + 1U);
+                        ++added;
+                    }
+                }
+            }
+        }
+        if (!added)
+            return 0;
+        visited = (uint16_t) (visited + added);
+        ++depth;
     }
+    return 1;
+}
+
+static int build_patterns(uint16_t goal_p, uint16_t goal_o)
+{
+    state_t state;
     for (uint16_t rank = 0; rank < PERMUTATIONS; ++rank) {
         unrank_state((uint32_t) rank * ORIENTATIONS, &state);
         for (uint8_t face = 0; face < 3; ++face) {
@@ -216,38 +247,59 @@ static uint8_t *build_table(uint8_t *diameter)
                 (uint16_t) (rank_state(&next) % ORIENTATIONS);
         }
     }
-    memset(toward_solved, UINT8_MAX, STATES);
-    queue[0] = 0;
-    toward_solved[0] = 0;
-    *diameter = 0;
-    while (head < tail) {
-        if (head == level_end) {
-            level_end = tail;
-            ++*diameter;
-        }
-        uint32_t here = queue[head++];
-        uint16_t p = (uint16_t) (here / ORIENTATIONS);
-        uint16_t o = (uint16_t) (here % ORIENTATIONS);
-        for (uint8_t face = 0; face < 3; ++face) {
-            uint16_t next_p = p, next_o = o;
-            for (uint8_t turn = 0; turn < 3; ++turn) {
-                next_p = permutation[face][next_p];
-                next_o = orientation[face][next_o];
-                uint32_t there = (uint32_t) next_p * ORIENTATIONS + next_o;
-                if (toward_solved[there] == UINT8_MAX) {
-                    uint8_t move = (uint8_t) (face * 3U + turn);
-                    toward_solved[there] = inverse_move[move];
-                    queue[tail++] = there;
-                }
-            }
+    return build_distances(PERMUTATIONS, &permutation[0][0],
+                           permutation_distance, goal_p) &&
+           build_distances(ORIENTATIONS, &orientation[0][0],
+                           orientation_distance, goal_o);
+}
+
+/* IDA*: h is the maximum of two admissible relaxed distances. Consecutive
+ * turns of one face can be combined or canceled, so they are redundant. */
+static int search(uint16_t p, uint16_t o, uint16_t goal_p, uint16_t goal_o,
+                  uint8_t depth, uint8_t bound, uint8_t previous_face,
+                  uint8_t *path)
+{
+    uint8_t h = permutation_distance[p] > orientation_distance[o]
+                    ? permutation_distance[p] : orientation_distance[o];
+    if (depth + h > bound)
+        return 0;
+    if (p == goal_p && o == goal_o)
+        return 1;
+    if (depth == bound)
+        return 0;
+    for (uint8_t face = 0; face < 3; ++face) {
+        if (face == previous_face)
+            continue;
+        uint16_t next_p = p, next_o = o;
+        for (uint8_t turn = 0; turn < 3; ++turn) {
+            next_p = permutation[face][next_p];
+            next_o = orientation[face][next_o];
+            path[depth] = (uint8_t) (face * 3U + turn);
+            if (search(next_p, next_o, goal_p, goal_o,
+                       (uint8_t) (depth + 1U), bound, face, path))
+                return 1;
         }
     }
-    free(queue);
-    if (tail != STATES) {
-        free(toward_solved);
-        return NULL;
+    return 0;
+}
+
+/* path runs from solved to state; print its inverse in reverse order. */
+static int solve(const state_t *state, uint8_t *path, uint8_t *length)
+{
+    uint32_t rank = rank_state(state);
+    uint16_t p = (uint16_t) (rank / ORIENTATIONS);
+    uint16_t o = (uint16_t) (rank % ORIENTATIONS);
+    if (!build_patterns(p, o))
+        return 0;
+    uint8_t first = permutation_distance[0] > orientation_distance[0]
+                        ? permutation_distance[0] : orientation_distance[0];
+    for (uint8_t bound = first; bound <= MAX_DEPTH; ++bound) {
+        if (search(0, 0, p, o, 0, bound, 3, path)) {
+            *length = bound;
+            return 1;
+        }
     }
-    return toward_solved;
+    return 0;
 }
 
 /*@ requires valid_read_string(input);
@@ -301,6 +353,15 @@ static int output_failed(void)
 static int self_test(void)
 {
     const state_t solved = {{0, 1, 2, 3, 4, 5, 6}, {0}};
+    static const struct {
+        const char *input;
+        uint8_t optimal_length;
+    } cases[] = {
+        {"12345671111111", 0}, {"62345713133111", 8},
+        {"24316572122213", 8}, {"25713642221111", 8},
+        {"24513763133333", 9}, {"43752611332133", 9},
+        {"25416373331111", 10}, {"21345671111111", 11},
+    };
     state_t state;
     for (uint8_t move = 0; move < MOVES; ++move) {
         state = solved;
@@ -314,29 +375,28 @@ static int self_test(void)
         if (!valid(&state) || rank_state(&state) != rank)
             return 0;
     }
+    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; ++i) {
+        uint8_t path[MAX_DEPTH], length;
+        if (!parse_state(cases[i].input, &state) ||
+            !solve(&state, path, &length) || length != cases[i].optimal_length)
+            return 0;
+        for (uint8_t j = length; j-- > 0;)
+            state = apply_move(state, inverse_move[path[j]]);
+        if (memcmp(&solved, &state, sizeof solved))
+            return 0;
+    }
     return 1;
 }
 
 int main(int argc, char **argv)
 {
     state_t state;
-    uint8_t diameter;
     if (argc == 2 && !strcmp(argv[1], "--self-test")) {
         if (!self_test()) {
             fputs("self-test failed\n", stderr);
             return 1;
         }
-        uint8_t *table = build_table(&diameter);
-        if (!table) {
-            fputs("could not build complete state table\n", stderr);
-            return 1;
-        }
-        free(table);
-        if (diameter != 11) {
-            fputs("BFS check failed\n", stderr);
-            return 1;
-        }
-        puts("3674160 states; diameter 11");
+        puts("3674160 ranks checked; 8 optimal solutions verified");
         return output_failed();
     }
     if (argc != 2 || !parse_state(argv[1], &state)) {
@@ -345,19 +405,16 @@ int main(int argc, char **argv)
                 argc > 0 && argv[0] ? argv[0] : "solver");
         return 2;
     }
-    uint8_t *table = build_table(&diameter);
-    if (!table) {
-        fputs("could not build complete state table\n", stderr);
+    uint8_t path[MAX_DEPTH], length;
+    if (!solve(&state, path, &length)) {
+        fputs("could not solve state within 11 moves\n", stderr);
         return 1;
     }
     const char *separator = "";
-    for (uint32_t rank = rank_state(&state); rank; rank = rank_state(&state)) {
-        uint8_t move = table[rank];
-        printf("%s%s", separator, move_names[move]);
+    for (uint8_t i = length; i-- > 0;) {
+        printf("%s%s", separator, move_names[inverse_move[path[i]]]);
         separator = " ";
-        state = apply_move(state, move);
     }
     putchar('\n');
-    free(table);
     return output_failed();
 }
