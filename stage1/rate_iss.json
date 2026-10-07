@@ -1,0 +1,10 @@
+{
+    "# instructions retired": 1310725,
+    "execution time (ms)": 103,
+    "runinfo": {
+        "ISA extensions": [
+        ],
+        "processor": "RV32_ISS",
+        "source file": ".\\ripes_rate_probe.s"
+    }
+}
