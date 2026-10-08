@@ -1,9 +1,0 @@
-solver-led.elf  :
-section              size        addr
-.text                2404           0
-.rodata             34856   268435456
-.data                6364   268470312
-.riscv.attributes      26           0
-Total               43650
-
-

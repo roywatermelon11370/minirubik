@@ -3,6 +3,9 @@ set -eu
 cd "$(dirname "$0")"
 mkdir -p build
 toolchain="${RISCV_TOOLCHAIN:-$PWD/../stage4_rv32i/build/toolchain/usr/bin}"
+if [ ! -x "$toolchain/riscv64-unknown-elf-as" ]; then
+    toolchain=$(dirname "$(command -v riscv64-unknown-elf-as)")
+fi
 assembler="$toolchain/riscv64-unknown-elf-as"
 linker="$toolchain/riscv64-unknown-elf-ld"
 size="$toolchain/riscv64-unknown-elf-size"

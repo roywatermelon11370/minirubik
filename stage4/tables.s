@@ -1144,5 +1144,9 @@ led_twist:
     .byte 0, 0, 0, 0, 0, 0, 0, 0
 .endif
 .align 2
+.globl rank_weights
+rank_weights:
+    .half 720, 120, 24, 6, 2, 1
+.align 2
 .globl tables_end
 tables_end:

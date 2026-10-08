@@ -57,6 +57,8 @@ led_print_move: .word 0
 led_turns: .word 0
 .endif
 static_end:
+.equ GOAL_O_OFFSET, goal_o-goal_p
+.equ RESULT_LENGTH_OFFSET, result_length-expected_length
 
 .text
 .globl main
@@ -64,10 +66,11 @@ main:
     la a0, input_state
     jal ra, parse_input
     bltz a0, invalid_input
+    mv s4, a0
+    mv s5, a1
     la t0, goal_p
     sw a0, 0(t0)
-    la t0, goal_o
-    sw a1, 0(t0)
+    sw a1, GOAL_O_OFFSET(t0)
 .if RENDER
     jal ra, renderer_init
 .endif
@@ -76,24 +79,21 @@ main:
     la a0, permutation_turns
     la a1, permutation_distance
     li a2, 5040
-    la t0, goal_p
-    lw a3, 0(t0)
+    mv a3, s4
     jal ra, build_distances
     beqz a0, failed_result
     la a0, orientation_turns
     la a1, orientation_distance
     li a2, 729
-    la t0, goal_o
-    lw a3, 0(t0)
+    mv a3, s5
     jal ra, build_distances
     beqz a0, failed_result
 
     jal ra, solve_iterative
     bltz a0, failed_result
     mv s11, a0
-    la t0, result_length
-    sw s11, 0(t0)
     la t0, expected_length
+    sw s11, RESULT_LENGTH_OFFSET(t0)
     lw t0, 0(t0)
     bltz t0, main_validate
     bne t0, s11, failed_result
@@ -139,30 +139,26 @@ exit_failure:
 parse_input:
     mv t6, a0
     li t0, 0
-    li t1, 0
-parse_permutation:
-    add t2, t6, t0
-    lbu t3, 0(t2)
-    addi t3, t3, -49
-    li t4, 7
-    bgeu t3, t4, parse_bad
-    li t4, 1
-    sll t4, t4, t3
-    and t5, t1, t4
-    bnez t5, parse_bad
-    or t1, t1, t4
-    addi t0, t0, 1
-    li t4, 7
-    bltu t0, t4, parse_permutation
-
-    # Lehmer rank: weighted count of smaller digits on the right.
-    # Constant factorial weights need only shifts and additions.
+    li a4, 0
     li a0, 0
-    li t0, 0
-    li a2, 720
+    la a3, rank_weights
+# Validate and rank in one pass. The seventh cubie needs validation only.
 parse_rank_outer:
     add t2, t6, t0
     lbu t3, 0(t2)
+    addi t5, t3, -49
+    li t4, 7
+    bgeu t5, t4, parse_bad
+    li t4, 1
+    sll t4, t4, t5
+    and t5, a4, t4
+    bnez t5, parse_bad
+    or a4, a4, t4
+    li t4, 6
+    beq t0, t4, parse_orientations
+    slli t5, t0, 1
+    add t5, a3, t5
+    lhu a2, 0(t5)
     addi t1, t0, 1
     li t4, 0
 parse_rank_inner:
@@ -183,31 +179,6 @@ parse_rank_add:
     bnez t4, parse_rank_add
 parse_rank_next:
     addi t0, t0, 1
-    li t5, 1
-    beq t0, t5, parse_weight120
-    li t5, 2
-    beq t0, t5, parse_weight24
-    li t5, 3
-    beq t0, t5, parse_weight6
-    li t5, 4
-    beq t0, t5, parse_weight2
-    li t5, 5
-    beq t0, t5, parse_weight1
-    j parse_orientations
-parse_weight120:
-    li a2, 120
-    j parse_rank_outer
-parse_weight24:
-    li a2, 24
-    j parse_rank_outer
-parse_weight6:
-    li a2, 6
-    j parse_rank_outer
-parse_weight2:
-    li a2, 2
-    j parse_rank_outer
-parse_weight1:
-    li a2, 1
     j parse_rank_outer
 parse_orientations:
     li a1, 0
@@ -261,12 +232,13 @@ bfs_clear:
     li a4, 1
     li a5, 0
     slli a6, a2, 1
+    li t1, 255
 bfs_level:
     li a7, 0
     li t0, 0
 bfs_scan:
-    add t1, a1, t0
-    lbu t6, 0(t1)
+    add t6, a1, t0
+    lbu t6, 0(t6)
     bne t6, a5, bfs_next_state
     mv t2, a0
     li t3, 3
@@ -279,7 +251,6 @@ bfs_turn:
     lhu t4, 0(t6)
     add t6, a1, t4
     lbu a3, 0(t6)
-    li t1, 255
     bne a3, t1, bfs_seen
     addi a3, a5, 1
     sb a3, 0(t6)
@@ -312,10 +283,7 @@ solve_iterative:
     la s1, orientation_ptrs
     la s2, permutation_distance
     la s3, orientation_distance
-    la t0, goal_p
-    lw s4, 0(t0)
-    la t0, goal_o
-    lw s5, 0(t0)
+    # main has already set s4/s5; all intervening leaf routines preserve them.
     la s9, path
     la s10, search_frames
     lbu s6, 0(s2)
@@ -376,16 +344,16 @@ search_advance_face:
     lw t2, 4(s8)
     sw t2, 12(s8)
 search_child:
+    # max(pd,od) <= remaining is equivalent to BOTH distances <= remaining.
+    # A rejected permutation needs no orientation-distance load/comparison.
+    sub t3, s6, s7
+    addi t3, t3, -1
     add t1, s2, a0
     lbu t1, 0(t1)
+    bgtu t1, t3, search_next
     add t2, s3, a1
     lbu t2, 0(t2)
-    bgeu t1, t2, search_h_ready
-    mv t1, t2
-search_h_ready:
-    add t1, t1, s7
-    addi t1, t1, 1
-    bgtu t1, s6, search_next
+    bgtu t2, t3, search_next
     # Only accepted children need a recorded path move.
     slli t2, t0, 1
     add t2, t2, t0
@@ -428,10 +396,9 @@ search_found:
 # This checks every returned move rather than relying on printed output.
 validate_path:
     mv a5, a0
-    la t0, goal_p
-    lw a0, 0(t0)
-    la t0, goal_o
-    lw a1, 0(t0)
+    # Immutable goal registers are still live after solve_iterative.
+    mv a0, s4
+    mv a1, s5
     la a2, path
     la a3, permutation_ptrs
     la a4, orientation_ptrs
@@ -533,11 +500,12 @@ led_print_done:
     la a3, faces
     la a4, suffixes
     li a6, 0
+    # Ripes print_char preserves a7; this leaf uses only that ecall.
+    li a7, 11
 print_next:
     beqz a5, print_done
     beqz a6, print_no_separator
     li a0, 32
-    li a7, 11
     ecall
 print_no_separator:
     li a6, 1
@@ -554,17 +522,14 @@ print_face:
 print_face_ready:
     add t1, a3, t1
     lbu a0, 0(t1)
-    li a7, 11
     ecall
     add t0, a4, t0
     lbu a0, 0(t0)
     beqz a0, print_next
-    li a7, 11
     ecall
     j print_next
 print_done:
     li a0, 10
-    li a7, 11
     ecall
     ret
 .endif

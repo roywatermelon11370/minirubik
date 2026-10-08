@@ -1,7 +1,7 @@
 /* Host-only generator for stage3_coordinates.c. Native C arithmetic is
  * permitted here; the linked target contains data and pure RV32I instructions. */
 #define main coordinates_cli_main
-#include "../stage3_tutorial/stage3_coordinates.c"
+#include "../stage3/stage3_coordinates.c"
 #undef main
 
 static void emit_table(const char *name, const uint16_t *values, unsigned count)
@@ -58,15 +58,32 @@ static void emit_renderer_tables(void)
     puts(".endif");
 }
 
-int main(void)
+static void emit_c(const char *name, const uint16_t *values, unsigned count)
+{
+    printf("static const uint16_t %s[%u] = {\n", name, count);
+    for (unsigned i = 0; i < count; ++i) {
+        if (i % 16 == 0) printf("    ");
+        printf("%u,", values[i]);
+        if (i % 16 == 15 || i + 1 == count) putchar('\n');
+    }
+    puts("};");
+}
+
+int main(int argc, char **argv)
 {
     if (!build_patterns(0, 0)) return 1;
+    if (argc == 2 && !strcmp(argv[1], "--c")) {
+        emit_c("permutation_turns", &permutation[0][0], 3 * PERMUTATIONS);
+        emit_c("orientation_turns", &orientation[0][0], 3 * ORIENTATIONS);
+        return ferror(stdout) != 0;
+    }
     puts("# Generated only from stage3_coordinates.c; do not edit entries.");
     puts("# Quarter-turn transitions only. Goal-specific distances are built on target.");
     puts(".section .rodata\n.globl tables_begin\ntables_begin:");
     emit_table("permutation_turns", &permutation[0][0], 3 * PERMUTATIONS);
     emit_table("orientation_turns", &orientation[0][0], 3 * ORIENTATIONS);
     emit_renderer_tables();
+    puts(".align 2\n.globl rank_weights\nrank_weights:\n    .half 720, 120, 24, 6, 2, 1");
     puts(".align 2\n.globl tables_end\ntables_end:");
     return ferror(stdout) != 0;
 }

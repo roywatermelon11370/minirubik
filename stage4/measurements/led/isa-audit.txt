@@ -1,1 +1,0 @@
-PASS: 601 linked instructions are 32-bit RV32I; no unresolved helpers; table/solver sources are separate.
