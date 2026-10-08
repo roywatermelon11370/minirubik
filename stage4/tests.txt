@@ -1,0 +1,12 @@
+# state|optimal HTM length|exact Stage 3 solution
+# Own required cases: solved, single R scramble, and known distance-11 state.
+12345671111111|0|
+25314672313211|1|R'
+21345671111111|11|B' R' D2 R' B R B' R D2 B R'
+# Existing regression vectors from ../tests/solutions.txt.
+62345713133111|8|R2 D B2 R' D R' D B'
+24316572122213|8|R' D' R2 B D' B2 D' R2
+25713642221111|8|R B2 R' D2 B R B2 R'
+24513763133333|9|B' R2 B' R B2 D' R' D2 R'
+43752611332133|9|R' D2 R2 D' R D2 B D' R2
+25416373331111|10|R' B R' B R' B2 D2 B' R' B2

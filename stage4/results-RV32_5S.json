@@ -1,0 +1,26 @@
+[
+  {
+    "state": "12345671111111",
+    "length": 0,
+    "processor": "RV32_5S",
+    "iret": 640980,
+    "execution_ms": 3805,
+    "solution": ""
+  },
+  {
+    "state": "25314672313211",
+    "length": 1,
+    "processor": "RV32_5S",
+    "iret": 641104,
+    "execution_ms": 3781,
+    "solution": "R'"
+  },
+  {
+    "state": "21345671111111",
+    "length": 11,
+    "processor": "RV32_5S",
+    "iret": 10642735,
+    "execution_ms": 63803,
+    "solution": "B' R' D2 R' B R B' R D2 B R'"
+  }
+]

@@ -1,0 +1,10 @@
+{
+    "# instructions retired": 8453597,
+    "execution time (ms)": 1910,
+    "runinfo": {
+        "ISA extensions": [
+        ],
+        "processor": "RV32_ISS",
+        "source file": "C:\\Data\\minirubik-main-codex\\stage4_rv32i\\build\\RV32_ISS-25416373331111.s"
+    }
+}

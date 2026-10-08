@@ -1,0 +1,4 @@
+B' R' D2 R' B R B' R D2 B R'
+PASS
+
+Program exited with code: 0

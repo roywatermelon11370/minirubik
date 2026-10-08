@@ -1,0 +1,10 @@
+{
+    "# instructions retired": 12198078,
+    "execution time (ms)": 1259,
+    "runinfo": {
+        "ISA extensions": [
+        ],
+        "processor": "RV32_ISS",
+        "source file": "stage4_rv32i/build/reference.elf"
+    }
+}

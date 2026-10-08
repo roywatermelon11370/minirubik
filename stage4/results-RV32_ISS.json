@@ -1,0 +1,74 @@
+[
+  {
+    "state": "12345671111111",
+    "length": 0,
+    "processor": "RV32_ISS",
+    "iret": 640981,
+    "execution_ms": 128,
+    "solution": ""
+  },
+  {
+    "state": "25314672313211",
+    "length": 1,
+    "processor": "RV32_ISS",
+    "iret": 641105,
+    "execution_ms": 184,
+    "solution": "R'"
+  },
+  {
+    "state": "21345671111111",
+    "length": 11,
+    "processor": "RV32_ISS",
+    "iret": 10642736,
+    "execution_ms": 2695,
+    "solution": "B' R' D2 R' B R B' R D2 B R'"
+  },
+  {
+    "state": "62345713133111",
+    "length": 8,
+    "processor": "RV32_ISS",
+    "iret": 857576,
+    "execution_ms": 258,
+    "solution": "R2 D B2 R' D R' D B'"
+  },
+  {
+    "state": "24316572122213",
+    "length": 8,
+    "processor": "RV32_ISS",
+    "iret": 729882,
+    "execution_ms": 162,
+    "solution": "R' D' R2 B D' B2 D' R2"
+  },
+  {
+    "state": "25713642221111",
+    "length": 8,
+    "processor": "RV32_ISS",
+    "iret": 698197,
+    "execution_ms": 141,
+    "solution": "R B2 R' D2 B R B2 R'"
+  },
+  {
+    "state": "24513763133333",
+    "length": 9,
+    "processor": "RV32_ISS",
+    "iret": 966423,
+    "execution_ms": 258,
+    "solution": "B' R2 B' R B2 D' R' D2 R'"
+  },
+  {
+    "state": "43752611332133",
+    "length": 9,
+    "processor": "RV32_ISS",
+    "iret": 1219495,
+    "execution_ms": 289,
+    "solution": "R' D2 R2 D' R D2 B D' R2"
+  },
+  {
+    "state": "25416373331111",
+    "length": 10,
+    "processor": "RV32_ISS",
+    "iret": 8453597,
+    "execution_ms": 1910,
+    "solution": "R' B R' B R' B2 D2 B' R' B2"
+  }
+]

@@ -1,0 +1,3 @@
+Assembly v1: .text 1564, static data 50996
+Final assembly: .text 1568, static data 50996
+GCC 14.2.0 -O2 reference: .text 1380, .rodata 34688, .bss 16248

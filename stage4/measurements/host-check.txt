@@ -1,0 +1,4 @@
+H1: all 3674160 heuristic bounds admissible; H2: PDB maxima 7/6; diameter 11
+2644 searches matched exact BFS distances and replayed to solved
+Maximum child attempts among d=11: 888536 (25714632313211)
+Native elapsed CPU seconds: 8.976

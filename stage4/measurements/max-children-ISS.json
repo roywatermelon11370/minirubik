@@ -1,0 +1,10 @@
+{
+    "# instructions retired": 38568300,
+    "execution time (ms)": 4978,
+    "runinfo": {
+        "ISA extensions": [
+        ],
+        "processor": "RV32_ISS",
+        "source file": "stage4_rv32i/build/worst-child-count.s"
+    }
+}
