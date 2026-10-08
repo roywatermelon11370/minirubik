@@ -1,4 +1,4 @@
-# RV32I adaptation of solver_stage3_coordinates.c.
+# RV32I adaptation of stage3_coordinates.c.
 
 .ifndef RENDER
 .equ RENDER, 0
