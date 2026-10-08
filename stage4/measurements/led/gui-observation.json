@@ -1,0 +1,15 @@
+{
+  "processor": "RV32_ISS",
+  "isa_extensions": [],
+  "elf": "solver-led.elf",
+  "input": "21345671111111",
+  "LED_MATRIX_0_BASE": "0xf0000000",
+  "width": 35,
+  "height": 25,
+  "observations": [
+    "Mixed corner colors observed during live GUI animation",
+    "Final net has six uniform faces",
+    "GUI console shows the expected 11 moves, PASS, and guest exit code 0"
+  ],
+  "provenance": "Direct Ripes GUI observations through computer-use"
+}

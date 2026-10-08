@@ -1,0 +1,9 @@
+solver.elf  :
+section              size        addr
+.text                1564           0
+.rodata             34616   268435456
+.data                6300   268470072
+.riscv.attributes      26           0
+Total               42506
+
+
